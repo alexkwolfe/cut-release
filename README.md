@@ -24,7 +24,4 @@ Usage: cut-release [<newversion> | patch | minor | major | prepatch | preminor |
 
     --yes, -y       Don't confirm, just release right away. The new version must be supplied.
 
-    --message, -m   If supplied, npm will use it as a commit message when
-                    creating a version commit. If the message contains %s then
-                    that will be replaced with the resulting version number
 ```
