@@ -201,6 +201,54 @@ var prompts = [
     default: 'latest'
   },
   {
+    type: 'list',
+    name: 'remote',
+    message: 'Which git remote should your local branch be tracking?',
+    choices: function (answers) {
+      var done = this.async()
+      exec('git fetch', function (err) {
+        if (err) {
+          log(err)
+          process.exit(1)
+        }
+        capture('git remote', function (remotes) {
+          remotes = remotes.split('\n').map(function (remote) {
+            return {
+              name: remote,
+              value: remote + '/' + answers.branch
+            }
+          })
+          if (!remotes.length) {
+            log('No git remotes found')
+            process.exit(1)
+          }
+          done(remotes)
+        })
+      })
+    },
+    when: function (answers) {
+      var done = this.async()
+      isGitRepo(function (isGitRepo) {
+        if (!isGitRepo) {
+          return done(false)
+        }
+        capture('git rev-parse --abbrev-ref HEAD', function (branch) {
+          if (!branch) {
+            log('Cannot determine git branch')
+            process.exit(1)
+          }
+          answers.branch = branch
+          exec('git rev-parse --symbolic-full-name --abbrev-ref ' + branch + '@{u}', function (err, stdout) {
+            if (!err) {
+              answers.remote = stdout.replace(/^\s|\s$/, '')
+            }
+            done(!!err)
+          })
+        })
+      })
+    }
+  },
+  {
     type: 'confirm',
     name: 'confirm',
     message: function (answers) {
@@ -228,6 +276,21 @@ function maybeInc (version, preid) {
 function isGitRepo (callback) {
   fs.stat(path.join(process.cwd(), '.git'), function (err, stat) {
     callback(!err && stat.isDirectory())
+  })
+}
+
+function capture (cmd, callback) {
+  exec(cmd, function(err, stdout) {
+    if (err) {
+      return callback()
+    }
+    if (stdout) {
+      stdout = stdout.replace(/^\s|\s$/, '')
+      if (stdout !== '') {
+        return callback(stdout)
+      }
+    }
+    callback()
   })
 }
 
@@ -285,6 +348,74 @@ function selfUpdate () {
   })
 }
 
+function ensureCleanGit (answers, callback) {
+  if (!answers.remote) {
+    return callback()
+  }
+
+  async.series([checkRepoInSync, checkTag], function (err) {
+    if (err) {
+      log(chalk.red(err.message))
+      process.exit(1)
+    }
+    callback()
+  })
+
+  function checkTag (callback) {
+    capture('git tag', function (tags) {
+      if (!tags) {
+        callback(new Error('Could not list git tags'))
+      }
+
+      var tag = maybeInc(answers.version, answers.preid)
+
+      tags = tags.split('\n').map(function (tag) {
+        var parsed = semver.parse(tag)
+        if (parsed) {
+          return parsed.version
+        }
+      }).filter(function (tag) {
+        return tag
+      });
+
+      if (tags.indexOf(tag) == -1) {
+        callback()
+      } else {
+        capture('git rev-list -1 v' + tag, function (tagSha) {
+          capture('git rev-parse HEAD', function (commitSha) {
+            if (tagSha == commitSha) {
+              execCmd('git tag -d v' + tag, function (err) {
+                if (err) return callback(err)
+                callback()
+              })
+            } else {
+              callback(new Error('The git tag v' + tag + ' already exists'))
+            }
+          })
+        })
+      }
+    })
+  }
+
+  function checkRepoInSync (callback) {
+    var parts = answers.remote.split('/')
+    var remote = parts[0],
+      branch = parts[1]
+
+    exec('git diff-index --quiet HEAD --', function (err) {
+      if (err) return callback(new Error('There are uncommitted changes in your local repo.'))
+      capture('git rev-parse --verify ' + branch, function (localSha) {
+        capture('git rev-parse --verify ' + remote + '/' + branch, function (remoteSha) {
+          if (localSha !== remoteSha) {
+            return callback(new Error('The local branch and remote branch are out of sync.'))
+          }
+          callback()
+        })
+      })
+    })
+  }
+}
+
 maybeSelfUpdate(function (err, shouldSelfUpdate) {
   if (err) {
     // log('Selfupdate check failed: ' + err.stack)
@@ -304,11 +435,22 @@ maybeSelfUpdate(function (err, shouldSelfUpdate) {
     if (!answers.confirm) {
       process.exit(0)
     }
-    isGitRepo(function (isGitRepo) {
+
+    ensureCleanGit(answers, function () {
+      var remote = '',
+          branch = ''
+      if (answers.remote) {
+        var remoteParts = answers.remote.split('/').map(function (part) {
+          return ' ' + part;
+        })
+        remote = remoteParts[0]
+        branch = remoteParts[1] || ''
+      }
+
       var commands = [
         'npm version ' + maybeInc(answers.version, answers.preid) + (argv.message ? ' --message ' + argv.message : ''),
-        isGitRepo && 'git push origin',
-        isGitRepo && 'git push origin --tags',
+        answers.remote && 'git push' + remote + branch,
+        answers.remote && 'git push' + remote + branch + ' --tags',
         'npm publish' + (answers.tag ? ' --tag ' + answers.tag : '')
       ]
         .filter(Boolean)
@@ -339,5 +481,6 @@ maybeSelfUpdate(function (err, shouldSelfUpdate) {
         process.exit(1)
       }
     })
+
   })
 })
