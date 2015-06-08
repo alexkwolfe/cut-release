@@ -407,7 +407,7 @@ function ensureCleanGit (answers, callback) {
       capture('git rev-parse --verify ' + branch, function (localSha) {
         capture('git rev-parse --verify ' + remote + '/' + branch, function (remoteSha) {
           if (localSha !== remoteSha) {
-            return callback(new Error('The local branch and remote branch are out of sync.'))
+            return callback(new Error('The local branch (' + branch + ') and the remote branch (' + remote + '/' + branch + ') are out of sync.'))
           }
           callback()
         })
