@@ -313,7 +313,7 @@ function execCmd (cmd, callback) {
 }
 
 function maybeSelfUpdate (callback) {
-  exec('npm view cut-release@latest version', {timeout: 2000}, function (error, stdout, stderr) {
+  exec('npm view ' + selfPkg.name + '@latest version', {timeout: 2000}, function (error, stdout, stderr) {
     if (error) {
       return callback(error)
     }
@@ -340,8 +340,8 @@ function maybeSelfUpdate (callback) {
 }
 
 function selfUpdate () {
-  log(chalk.blue('Running selfupdate. Please hang on...'))
-  var cmd = 'npm i -g cut-release@latest'
+  log(chalk.blue('Running self-update. Please hang on...'))
+  var cmd = 'npm i -g ' + selfPkg.name + '@latest'
   execCmd(cmd, function () {
     log(chalk.blue('Self update completed'))
     spawn('cut-release', process.argv.slice(2), {stdio: 'inherit'})
