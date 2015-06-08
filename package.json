@@ -1,5 +1,5 @@
 {
-  "name": "cut-release",
+  "name": "@activeprospect/cut-release",
   "version": "0.2.1",
   "description": "A tool that helps you make faster npm releases",
   "main": "index.js",
