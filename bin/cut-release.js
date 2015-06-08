@@ -231,6 +231,52 @@ function isGitRepo (callback) {
   })
 }
 
+function capture (cmd, callback) {
+  exec(cmd, function(err, stdout) {
+    if (err) {
+      log(err)
+      return callback()
+    }
+    if (stdout) {
+      stdout = stdout.replace(/^\s|\s$/, '')
+      if (stdout !== '') {
+        return callback(stdout)
+      }
+    }
+    callback()
+  })
+}
+
+function ensureGitReady (callback) {
+  capture('git rev-parse --abbrev-ref HEAD', function (branch) {
+    capture('git config branch.' + branch + '.remote', function (remote) {
+      if (!remote) {
+        log(chalk.red('The '+ branch + ' branch is not tracking a remote. Run\n\ngit branch -u origin/' + branch))
+        process.exit(1)
+      } else if (remote == '.') {
+        log(chalk.red('The ' + branch + ' branch is tracking a remote branch that does not exist. Make sure it exists in the remote repo, then run\n\ngit fetch'))
+        process.exit(1)
+      }
+
+      capture('git rev-parse --verify ' + branch, function(localSha) {
+        capture('git rev-parse --verify ' + remote + '/' + branch, function(remoteSha) {
+          if (localSha !== remoteSha) {
+            log(chalk.red('The local branch and remote branch are out of sync.'))
+            process.exit(1)
+          }
+          exec('git diff-index --quiet HEAD --', function(err) {
+            if (err) {
+              log(chalk.red('There are uncommitted changes in your local repo.'))
+              process.exit(1)
+              callback()
+            }
+          })
+        })
+      })
+    })
+  })
+}
+
 function execCmd (cmd, callback) {
   if (dryRun) {
     return callback()
@@ -305,38 +351,48 @@ maybeSelfUpdate(function (err, shouldSelfUpdate) {
       process.exit(0)
     }
     isGitRepo(function (isGitRepo) {
-      var commands = [
-        'npm version ' + maybeInc(answers.version, answers.preid) + (argv.message ? ' --message ' + argv.message : ''),
-        isGitRepo && 'git push origin',
-        isGitRepo && 'git push origin --tags',
-        'npm publish' + (answers.tag ? ' --tag ' + answers.tag : '')
-      ]
-        .filter(Boolean)
-
-      var remaining = commands.slice()
-      async.eachSeries(commands, function (command, callback) {
-          log('=> ' + command)
-          execCmd(command, function (err, result) {
-            callback(err, result)
-            remaining.shift()
-          })
-        },
-        function (err) {
-          if (err) {
-            return showError(err)
-          }
-          log(chalk.green('Done'))
+      if (isGitRepo) {
+        ensureGitReady(function (){
+          runCommands()
         })
+      } else {
+        runCommands()
+      }
 
-      function showError(error) {
-        log('')
-        log(chalk.red(error.stdout))
-        log('')
-        log(chalk.red(error.message))
-        log('')
-        log(chalk.yellow('You can try again by running these commands manually:'))
-        log(chalk.white(remaining.join('\n')))
-        process.exit(1)
+      function runCommands() {
+        var commands = [
+          'npm version ' + maybeInc(answers.version, answers.preid) + (argv.message ? ' --message ' + argv.message : ''),
+          isGitRepo && 'git push origin',
+          isGitRepo && 'git push origin --tags',
+          'npm publish' + (answers.tag ? ' --tag ' + answers.tag : '')
+        ]
+          .filter(Boolean)
+
+        var remaining = commands.slice()
+        async.eachSeries(commands, function (command, callback) {
+            log('=> ' + command)
+            execCmd(command, function (err, result) {
+              callback(err, result)
+              remaining.shift()
+            })
+          },
+          function (err) {
+            if (err) {
+              return showError(err)
+            }
+            log(chalk.green('Done'))
+          })
+
+        function showError(error) {
+          log('')
+          log(chalk.red(error.stdout))
+          log('')
+          log(chalk.red(error.message))
+          log('')
+          log(chalk.yellow('You can try again by running these commands manually:'))
+          log(chalk.white(remaining.join('\n')))
+          process.exit(1)
+        }
       }
     })
   })
