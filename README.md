@@ -15,7 +15,7 @@ A command line tool that helps you make faster npm releases.
 
 # Install
 
-    npm install -g cut-release
+    npm install -g @activeprospect/cut-release
 
 # Usage 
 
