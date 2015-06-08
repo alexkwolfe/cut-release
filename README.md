@@ -2,13 +2,16 @@
 
 A command line tool that helps you make faster npm releases.
 
-![](https://raw.githubusercontent.com/bjoerge/cut-release/master/demo.gif)
+![](https://raw.githubusercontent.com/activeprospect/cut-release/master/demo.gif)
 
 # What it does:
 
-  * runs `npm version` with the version you specify. If run in a git repo, it will also create a version commit and tag, just like what [`npm version`](https://docs.npmjs.com/cli/version) does.
-  * pushes commits and tags to origin
-  * runs `npm publish`
+  * If run in a git repo, ensures that the local repo has no uncommitted changes, that the tracked remote repo
+    are in sync and that the git tag doesn't already exist
+  * runs `npm version` with the version you specify. If run in a git repo, it will also create a version commit and tag,
+    just like what [`npm version`](https://docs.npmjs.com/cli/version) does.
+  * pushes commits and tags to the remote repo
+  * runs `npm publish` and tags the published module
 
 # Install
 

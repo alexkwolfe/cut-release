@@ -1,6 +1,6 @@
 {
   "name": "@activeprospect/cut-release",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A tool that helps you make faster npm releases",
   "main": "index.js",
   "bin": {
@@ -20,12 +20,12 @@
     "tag",
     "publish"
   ],
-  "author": "Bjørge Næss",
+  "author": "Bjørge Næss, Alex Wolfe",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/bjoerge/cut-release/issues"
+    "url": "https://github.com/activeprospect/cut-release/issues"
   },
-  "homepage": "https://github.com/bjoerge/cut-release",
+  "homepage": "https://github.com/activeprospect/cut-release",
   "dependencies": {
     "async": "^0.9.0",
     "chalk": "^1.0.0",
