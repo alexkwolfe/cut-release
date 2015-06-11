@@ -462,7 +462,6 @@ maybeSelfUpdate(function (err, shouldSelfUpdate) {
 
       var commands = [
         'npm version ' + maybeInc(answers.version, answers.preid) + (argv.message ? ' --message ' + argv.message : ''),
-        answers.remote && 'git push' + remote + branch,
         answers.remote && 'git push' + remote + branch + ' --tags',
         'npm publish' + (answers.tag ? ' --tag ' + answers.tag : '')
       ]
