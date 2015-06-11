@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict'
 
+var _ = require('lodash')
 var inquirer = require('inquirer')
 var chalk = require('chalk')
 var parseArgs = require('minimist')
@@ -164,13 +165,13 @@ var prompts = [
     name: 'tag',
     message: 'How should this version be tagged in NPM?',
     when: function (answers) {
-      if (tag == true) {
+      if (tag == true || answers.preid) {
         return true
       }
       answers.tag = tag || 'latest'
       return false
     },
-    choices: function () {
+    choices: function (answers) {
       var done = this.async()
       exec('npm dist-tag ls', function (err, stdout) {
         if (err) {
@@ -180,10 +181,22 @@ var prompts = [
           return line.split(':')[0].replace(/^\s|\s$/, '')
         }).filter(function (line) {
           return line
-        }).concat([
+        })
+
+        if (answers.preid) {
+          var latestIndex = choices.indexOf('latest');
+          if (latestIndex != -1) {
+            choices.splice(latestIndex, 1)
+            choices.unshift('prerelease')
+          }
+        }
+
+        choices = _.uniq(choices)
+
+        choices = choices.concat([
           new inquirer.Separator(),
           {
-            name: 'Other (specify)',
+            name: choices.length ? 'Other (specify)' : 'Add new tag' ,
             value: null
           }
         ])
