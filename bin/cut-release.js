@@ -515,10 +515,13 @@ maybeSelfUpdate(function (err, shouldSelfUpdate) {
           branch = remoteParts[1] || ''
         }
 
+        var newVersion = maybeInc(answers.version, answers.preid)
+
         var commands = [
-          'npm version ' + maybeInc(answers.version, answers.preid) + (argv.message ? ' --message ' + argv.message : ''),
+          'npm version ' + newVersion + (argv.message ? ' --message ' + argv.message : ''),
           answers.setRemote && 'git branch -u ' + answers.remote,
-          answers.remote && 'git push' + remote + branch + ' --tags',
+          answers.remote && 'git push' + remote + branch,
+          answers.remote && 'git push' + remote + ' v' + newVersion,
           'npm publish' + (answers.tag ? ' --tag ' + answers.tag : '')
         ]
           .filter(Boolean)
