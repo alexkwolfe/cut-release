@@ -1,6 +1,6 @@
 {
   "name": "@activeprospect/cut-release",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "A tool that helps you make faster npm releases",
   "main": "index.js",
   "bin": {
