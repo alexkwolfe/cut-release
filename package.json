@@ -1,7 +1,7 @@
 {
   "name": "@activeprospect/cut-release",
   "version": "0.3.6",
-  "description": "A tool that helps you make faster npm releases",
+  "description": "A tool that helps you make faster NPM releases",
   "main": "index.js",
   "bin": {
     "cut-release": "./bin/cut-release.js"
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bjoerge/cut-release"
+    "url": "https://github.com/activeprospect/cut-release"
   },
   "keywords": [
     "npm",
