@@ -32,7 +32,8 @@
     "inquirer": "^0.8.5",
     "lodash": "^3.9.3",
     "minimist": "^1.1.1",
-    "semver": "^4.3.4"
+    "semver": "^4.3.4",
+    "yargs": "^3.11.0"
   },
   "devDependencies": {
     "standard": "^3.7.3"

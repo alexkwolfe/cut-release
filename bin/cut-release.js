@@ -4,7 +4,7 @@
 var _ = require('lodash')
 var inquirer = require('inquirer')
 var chalk = require('chalk')
-var parseArgs = require('minimist')
+var yargs = require('yargs')
 var semver = require('semver')
 var fs = require('fs')
 var path = require('path')
@@ -20,32 +20,59 @@ Object.keys(inquirer.prompt.prompts).forEach(function (prompt) {
   }
 })
 
-var argv = parseArgs(process.argv.slice(2), {
-  alias: {
-    y: 'yes',
-    t: 'tag',
-    p: 'preid',
-    d: 'dry-run',
-    m: 'message',
-    h: 'help'
-  },
-  string: ['p'],
-  boolean: ['y','d'],
-  unknown: function (opt) {
-    if (semver.valid(opt) || SEMVER_INCREMENTS.indexOf(opt) > -1) {
-      return
+
+var argv = yargs.usage("Usage: cut-release [increment] [options]\n\nSupported increments: <semver>, " + SEMVER_INCREMENTS.join(', '))
+  .required(1, 'The increment is required: <semver>, ' + SEMVER_INCREMENTS.join(', '))
+  .options({
+    y: {
+      alias: 'yes',
+      demand: true,
+      default: false,
+      describe: 'Skip confirmation when present',
+      type: 'boolean'
+    },
+    t: {
+      alias: 'tag',
+      demand: false,
+      describe: 'NPM tag for the release (i.e. latest, next)',
+      type: 'string'
+    },
+    p: {
+      alias: 'preid',
+      demand: false,
+      describe: 'NPM prerelease identifier (i.e. rc, alpha, beta)',
+      type: 'string'
+    },
+    d: {
+      alias: 'dry-run',
+      default: false,
+      describe: 'Print commands to be run, but don\'t run them',
+      type: 'boolean'
+    },
+    m: {
+      alias: 'messasge',
+      describe: 'Version commit message - the %s variable will be replaced with the version',
+      type: 'string'
     }
-    log()
-    if (opt.substring(0, 1) === '-') {
-      log('Error: Invalid option "%s"', opt)
-    } else {
-      log('Error: Invalid version "%s"', opt)
+  })
+  .check(function(argv) {
+    var increment = argv._[0]
+    if (!semver.valid(increment) && SEMVER_INCREMENTS.indexOf(increment) == -1) {
+      throw new Error("The increment must be a valid semantic version, " + SEMVER_INCREMENTS.join(', '))
     }
-    log()
-    log(help())
-    process.exit(1)
-  }
-})
+    if (!(argv._[0] || '').match(/^pre/) && argv.preid) {
+      throw new Error('The --preid argument can only be used with increments that start with "pre", such as "prerelease".')
+    }
+    return true;
+  })
+  .version(function() {
+    return require('../package').version
+  })
+  .alias('v', 'version')
+  .help('h')
+  .alias('h', 'help')
+  .wrap(null)
+  .argv;
 
 var version = argv._[0],
     confirm = argv.yes,
@@ -151,7 +178,15 @@ var prompts = [
     name: 'preid',
     message: 'Identifier',
     when: function (answers) {
-      return !answers.preid && answers.version.match(/^pre/)
+      if (answers.version.match(/^pre/)) {
+        return !answers.preid
+      } else {
+        if (answers.preid) {
+          log(chalk.red('The --preid argument can only be used with increments that start with "pre", such as "prerelease".'))
+          process.exit(1)
+        }
+        return false
+      }
     },
     validate: function (input) {
       if (!input.match(/[a-z]+/)) {
@@ -165,7 +200,7 @@ var prompts = [
     name: 'tag',
     message: 'How should this version be tagged in NPM?',
     when: function (answers) {
-      if (tag == true || answers.preid) {
+      if (tag == '' || answers.preid) {
         return true
       }
       answers.tag = tag || 'latest'
@@ -254,6 +289,8 @@ var prompts = [
           exec('git rev-parse --symbolic-full-name --abbrev-ref ' + branch + '@{u}', function (err, stdout) {
             if (!err) {
               answers.remote = stdout.replace(/^\s|\s$/, '')
+            } else {
+              answers.setRemote = true
             }
             done(!!err)
           })
@@ -366,8 +403,9 @@ function ensureCleanGit (answers, callback) {
     return callback()
   }
 
-  async.series([checkRepoInSync, checkTag], function (err) {
+  async.series([checkLocalUpToDate, checkTag], function (err) {
     if (err) {
+      console.log("WTF", err)
       log(chalk.red(err.message))
       process.exit(1)
     }
@@ -410,23 +448,36 @@ function ensureCleanGit (answers, callback) {
     })
   }
 
-  function checkRepoInSync (callback) {
+  function checkLocalUpToDate (callback) {
     var parts = answers.remote.split('/')
     var remote = parts[0],
       branch = parts[1]
 
-    exec('git diff-index --quiet HEAD --', function (err) {
-      if (err) return callback(new Error('There are uncommitted changes in your local repo.'))
-      capture('git rev-parse --verify ' + branch, function (localSha) {
-        capture('git rev-parse --verify ' + remote + '/' + branch, function (remoteSha) {
-          if (localSha !== remoteSha) {
-            return callback(new Error('The local branch (' + branch + ') and the remote branch (' + remote + '/' + branch + ') are out of sync.'))
-          }
-          callback()
-        })
-      })
+    capture('git rev-list ' + branch + '..' + remote + '/' + branch + ' --count', function (count) {
+      var numCommitsRemoteAhead = parseInt(count.replace(/^s+|\s$/, ''), 10)
+      if (numCommitsRemoteAhead) {
+        var msg = [
+          'The remote branch (' + remote + '/' + branch + ') is ahead by ' + numCommitsRemoteAhead + ' commit' + (numCommitsRemoteAhead == 1 ? '' : 's'),
+          'Run "git pull --rebase ' + remote + ' ' + branch + '".'
+        ];
+        callback(new Error(msg.join('. ')))
+      } else {
+        callback()
+      }
     })
   }
+}
+
+function ensureNoLocalChanges (callback) {
+  isGitRepo(function(isGitRepo) {
+    if (!isGitRepo) {
+      return callback()
+    }
+    exec('git diff-index --quiet HEAD --', function (err) {
+      if (err) return callback(new Error('There are uncommitted changes in your local repo. Commit or revert before you cut a new release.'))
+      callback()
+    })
+  })
 }
 
 maybeSelfUpdate(function (err, shouldSelfUpdate) {
@@ -437,62 +488,69 @@ maybeSelfUpdate(function (err, shouldSelfUpdate) {
   if (shouldSelfUpdate) {
     return selfUpdate()
   }
-  if (dryRun) {
-    log('Dry run release of new version of `%s` (current version: %s)', pkg.name, pkg.version)
-  } else {
-    log('Releasing a new version of `%s` (current version: %s)', pkg.name, pkg.version)
-  }
 
-  log('')
-  inquirer.prompt(prompts, function (answers) {
-    if (!answers.confirm) {
-      process.exit(0)
+  ensureNoLocalChanges(function(err) {
+    if (err) {
+      log(chalk.red(err.message))
+      process.exit(1)
+    }
+    if (dryRun) {
+      log('Dry run release of new version of `%s` (current version: %s)', pkg.name, pkg.version)
+    } else {
+      log('Releasing a new version of `%s` (current version: %s)', pkg.name, pkg.version)
     }
 
-    ensureCleanGit(answers, function () {
-      var remote = '',
+    log('')
+    inquirer.prompt(prompts, function (answers) {
+      if (!answers.confirm) {
+        process.exit(0)
+      }
+      ensureCleanGit(answers, function () {
+        var remote = '',
           branch = ''
-      if (answers.remote) {
-        var remoteParts = answers.remote.split('/').map(function (part) {
-          return ' ' + part;
-        })
-        remote = remoteParts[0]
-        branch = remoteParts[1] || ''
-      }
-
-      var commands = [
-        'npm version ' + maybeInc(answers.version, answers.preid) + (argv.message ? ' --message ' + argv.message : ''),
-        answers.remote && 'git push' + remote + branch + ' --tags',
-        'npm publish' + (answers.tag ? ' --tag ' + answers.tag : '')
-      ]
-        .filter(Boolean)
-
-      var remaining = commands.slice()
-      async.eachSeries(commands, function (command, callback) {
-          log('=> ' + command)
-          execCmd(command, function (err, result) {
-            callback(err, result)
-            remaining.shift()
+        if (answers.remote) {
+          var remoteParts = answers.remote.split('/').map(function (part) {
+            return ' ' + part;
           })
-        },
-        function (err) {
-          if (err) {
-            return showError(err)
-          }
-          log(chalk.green('Done'))
-        })
+          remote = remoteParts[0]
+          branch = remoteParts[1] || ''
+        }
 
-      function showError(error) {
-        log('')
-        log(chalk.red(error.stdout))
-        log('')
-        log(chalk.red(error.message))
-        log('')
-        log(chalk.yellow('You can try again by running these commands manually:'))
-        log(chalk.white(remaining.join('\n')))
-        process.exit(1)
-      }
+        var commands = [
+          'npm version ' + maybeInc(answers.version, answers.preid) + (argv.message ? ' --message ' + argv.message : ''),
+          answers.setRemote && 'git branch -u ' + answers.remote,
+          answers.remote && 'git push' + remote + branch + ' --tags',
+          'npm publish' + (answers.tag ? ' --tag ' + answers.tag : '')
+        ]
+          .filter(Boolean)
+
+        var remaining = commands.slice()
+        async.eachSeries(commands, function (command, callback) {
+            log('=> ' + command)
+            execCmd(command, function (err, result) {
+              callback(err, result)
+              remaining.shift()
+            })
+          },
+          function (err) {
+            if (err) {
+              return showError(err)
+            }
+            log(chalk.green('Done'))
+          })
+
+        function showError(error) {
+          log('')
+          log(chalk.red(error.stdout))
+          log('')
+          log(chalk.red(error.message))
+          log('')
+          log(chalk.yellow('You can try again by running these commands manually:'))
+          log(chalk.white(remaining.join('\n')))
+          process.exit(1)
+        }
+      })
+
     })
-
   })
 })
