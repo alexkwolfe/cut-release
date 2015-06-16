@@ -56,7 +56,7 @@ var argv = yargs.usage("Usage: cut-release [increment] [options]\n\nSupported in
   })
   .check(function(argv) {
     var increment = argv._[0]
-    if (!semver.valid(increment) && SEMVER_INCREMENTS.indexOf(increment) == -1) {
+    if (increment && !semver.valid(increment) && SEMVER_INCREMENTS.indexOf(increment) == -1) {
       throw new Error("The increment must be a valid semantic version, " + SEMVER_INCREMENTS.join(', '))
     }
     if (!(argv._[0] || '').match(/^pre/) && argv.preid) {
