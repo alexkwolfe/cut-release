@@ -1,8 +1,8 @@
-# cut-release
+### cut-release
 
 A command line tool that helps you make faster NPM releases.
 
-# What it does:
+### What it does
 
   * If run in a git repo, ensures that the local repo has no uncommitted changes, that the local branch is tracking
     a remote branch, that the remote branch is not ahead of the local branch, and that the git tag doesn't already
@@ -12,11 +12,11 @@ A command line tool that helps you make faster NPM releases.
   * pushes commits and tags to the remote repo
   * runs `npm publish` and tags the published module
 
-# Install
+### Install
 
     npm install -g @activeprospect/cut-release
 
-# Usage 
+### Usage
 
 To see usage documentation, run `cut-release --help`:
 
@@ -37,6 +37,6 @@ Options:
   -v, --version   Show version number  [boolean]
 ```
 
-#### Thanks
+### Thanks
 
 This is a fork of https://github.com/bjoerge/cut-release. Special thanks to the original author.
