@@ -1,4 +1,4 @@
-### cut-release
+# cut-release
 
 A command line tool that helps you make faster NPM releases.
 
