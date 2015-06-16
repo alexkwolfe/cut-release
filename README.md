@@ -1,13 +1,14 @@
 # cut-release
 
-A command line tool that helps you make faster npm releases.
+A command line tool that helps you make faster NPM releases.
 
 ![](https://raw.githubusercontent.com/activeprospect/cut-release/master/demo.gif)
 
 # What it does:
 
-  * If run in a git repo, ensures that the local repo has no uncommitted changes, that the tracked remote repo
-    are in sync and that the git tag doesn't already exist
+  * If run in a git repo, ensures that the local repo has no uncommitted changes, that the local branch is tracking
+    a remote branch, that the tracked remote branch is not ahead of the local repo, and that the git tag doesn't already
+    exist
   * runs `npm version` with the version you specify. If run in a git repo, it will also create a version commit and tag,
     just like what [`npm version`](https://docs.npmjs.com/cli/version) does.
   * pushes commits and tags to the remote repo
@@ -19,22 +20,21 @@ A command line tool that helps you make faster npm releases.
 
 # Usage 
 
+To see usage documentation, run `cut-release --help`:
+
 ```
-Usage: cut-release [<newversion> | patch | minor | major | prepatch | preminor | premajor | prerelease]
+$ cut-release --help
 
+Usage: cut-release [increment] [options]
 
-  Options:
+Supported increments: <semver>, patch, minor, major, prepatch, preminor, premajor, prerelease
 
-    --yes, -y       Don't confirm, just release right away. The new version must be supplied.
-
-    --message, -m   If supplied, npm will use it as a commit message when
-                    creating a version commit. If the message contains %s then
-                    that will be replaced with the resulting version number
-
-    --tag, -t       The NPM tag to use when publishing. Defaults to 'latest'. Use this option with
-                    no value to choose from a list of existing tags.
-
-    --preid, -p     The NPM prerelease identifier to be used when a prerelease version is specified.
-
-    --dry-run, -d   Print the commands to be executed without actually running them.
+Options:
+  -y, --yes       Skip confirmation when present  [boolean] [required] [default: false]
+  -t, --tag       NPM tag for the release (i.e. latest, next)  [string]
+  -p, --preid     NPM prerelease identifier (i.e. rc, alpha, beta)  [string]
+  -d, --dry-run   Print commands to be run, but don't run them  [boolean] [default: false]
+  -m, --messasge  Version commit message - the %s variable will be replaced with the version  [string]
+  -h, --help      Show help  [boolean]
+  -v, --version   Show version number  [boolean]
 ```
