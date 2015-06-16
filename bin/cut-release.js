@@ -22,7 +22,6 @@ Object.keys(inquirer.prompt.prompts).forEach(function (prompt) {
 
 
 var argv = yargs.usage("Usage: cut-release [increment] [options]\n\nSupported increments: <semver>, " + SEMVER_INCREMENTS.join(', '))
-  .required(1, 'The increment is required: <semver>, ' + SEMVER_INCREMENTS.join(', '))
   .options({
     y: {
       alias: 'yes',
