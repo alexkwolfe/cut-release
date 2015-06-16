@@ -36,3 +36,7 @@ Options:
   -h, --help      Show help  [boolean]
   -v, --version   Show version number  [boolean]
 ```
+
+#### Thanks
+
+This is a fork of https://github.com/bjoerge/cut-release. Special thanks to the original author.
