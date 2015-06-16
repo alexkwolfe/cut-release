@@ -2,12 +2,10 @@
 
 A command line tool that helps you make faster NPM releases.
 
-![](https://raw.githubusercontent.com/activeprospect/cut-release/master/demo.gif)
-
 # What it does:
 
   * If run in a git repo, ensures that the local repo has no uncommitted changes, that the local branch is tracking
-    a remote branch, that the tracked remote branch is not ahead of the local repo, and that the git tag doesn't already
+    a remote branch, that the remote branch is not ahead of the local branch, and that the git tag doesn't already
     exist
   * runs `npm version` with the version you specify. If run in a git repo, it will also create a version commit and tag,
     just like what [`npm version`](https://docs.npmjs.com/cli/version) does.
