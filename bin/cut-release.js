@@ -404,7 +404,6 @@ function ensureCleanGit (answers, callback) {
 
   async.series([checkLocalUpToDate, checkTag], function (err) {
     if (err) {
-      console.log("WTF", err)
       log(chalk.red(err.message))
       process.exit(1)
     }
@@ -452,17 +451,22 @@ function ensureCleanGit (answers, callback) {
     var remote = parts[0],
       branch = parts[1]
 
-    capture('git rev-list ' + branch + '..' + remote + '/' + branch + ' --count', function (count) {
-      var numCommitsRemoteAhead = parseInt(count.replace(/^s+|\s$/, ''), 10)
-      if (numCommitsRemoteAhead) {
-        var msg = [
-          'The remote branch (' + remote + '/' + branch + ') is ahead by ' + numCommitsRemoteAhead + ' commit' + (numCommitsRemoteAhead == 1 ? '' : 's'),
-          'Run "git pull --rebase ' + remote + ' ' + branch + '".'
-        ];
-        callback(new Error(msg.join('. ')))
-      } else {
-        callback()
+    exec('git fetch', function(err) {
+      if (err) {
+        return callback(err)
       }
+      capture('git rev-list ' + branch + '..' + remote + '/' + branch + ' --count', function (count) {
+        var numCommitsRemoteAhead = parseInt(count.replace(/^s+|\s$/, ''), 10)
+        if (numCommitsRemoteAhead) {
+          var msg = [
+            'The remote branch (' + remote + '/' + branch + ') is ahead by ' + numCommitsRemoteAhead + ' commit' + (numCommitsRemoteAhead == 1 ? '' : 's'),
+            'Run "git pull --rebase ' + remote + ' ' + branch + '".'
+          ];
+          callback(new Error(msg.join('. ')))
+        } else {
+          callback()
+        }
+      })
     })
   }
 }
