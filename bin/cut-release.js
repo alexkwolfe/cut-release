@@ -412,9 +412,7 @@ function ensureCleanGit (answers, callback) {
 
   function checkTag (callback) {
     capture('git tag', function (tags) {
-      if (tags === null || tags === undefined) {
-        callback(new Error('Could not list git tags'))
-      }
+      tags = tags || '';
 
       var tag = maybeInc(answers.version, answers.preid)
 
