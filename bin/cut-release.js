@@ -150,7 +150,7 @@ var prompts = [
       }
       var done = this.async()
       exec('npm show . versions', function (err, stdout) {
-        if (err) return callback(err)
+        if (err) return done(err)
         var semvers = JSON.parse(stdout.replace(/'/g, '"')).map(function(version) {
           return semver.parse(version.replace(/[^0-9.a-z\-]/g, ''))
         }).filter(function(sver) {
@@ -412,7 +412,7 @@ function ensureCleanGit (answers, callback) {
 
   function checkTag (callback) {
     capture('git tag', function (tags) {
-      if (!tags) {
+      if (tags === null || tags === undefined) {
         callback(new Error('Could not list git tags'))
       }
 
