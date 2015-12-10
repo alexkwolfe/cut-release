@@ -454,15 +454,19 @@ function ensureCleanGit (answers, callback) {
         return callback(err)
       }
       capture('git rev-list ' + branch + '..' + remote + '/' + branch + ' --count', function (count) {
-        var numCommitsRemoteAhead = parseInt(count.replace(/^s+|\s$/, ''), 10)
-        if (numCommitsRemoteAhead) {
-          var msg = [
-            'The remote branch (' + remote + '/' + branch + ') is ahead by ' + numCommitsRemoteAhead + ' commit' + (numCommitsRemoteAhead == 1 ? '' : 's'),
-            'Run "git pull --rebase ' + remote + ' ' + branch + '".'
-          ];
-          callback(new Error(msg.join('. ')))
+        if (count == undefined) {
+          callback(new Error('The remote branch (' + remote + '/' + branch + ') does not exist. Run:\ngit push ' + remote + ' ' + branch));
         } else {
-          callback()
+          var numCommitsRemoteAhead = parseInt(count.replace(/^s+|\s$/, ''), 10)
+          if (numCommitsRemoteAhead) {
+            var msg = [
+              'The remote branch (' + remote + '/' + branch + ') is ahead by ' + numCommitsRemoteAhead + ' commit' + (numCommitsRemoteAhead == 1 ? '' : 's'),
+              'Run "git pull --rebase ' + remote + ' ' + branch + '".'
+            ];
+            callback(new Error(msg.join('. ')))
+          } else {
+            callback()
+          }
         }
       })
     })
